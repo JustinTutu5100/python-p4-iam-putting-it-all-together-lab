@@ -29,6 +29,7 @@ class Signup(Resource):
 
 api.add_resource(Signup, '/signup')
 
+
 # ------------------- AUTO-LOGIN -------------------
 class CheckSession(Resource):
     def get(self):
@@ -36,6 +37,8 @@ class CheckSession(Resource):
         if not user_id:
             return {"error": "Not logged in"}, 401
         user = User.query.get(user_id)
+        if not user:
+            return {"error": "Not logged in"}, 401
         return {
             "id": user.id,
             "username": user.username,
@@ -44,6 +47,7 @@ class CheckSession(Resource):
         }, 200
 
 api.add_resource(CheckSession, '/check_session')
+
 
 # ------------------- LOGIN -------------------
 class Login(Resource):
@@ -62,15 +66,18 @@ class Login(Resource):
 
 api.add_resource(Login, '/login')
 
+
 # ------------------- LOGOUT -------------------
 class Logout(Resource):
     def delete(self):
-        if 'user_id' in session:
-            session.pop('user_id')
-            return {}, 204
-        return {"error": "Not logged in"}, 401
+        user_id = session.get('user_id')
+        if not user_id:
+            return {"error": "Not logged in"}, 401
+        session.pop('user_id')
+        return {}, 204
 
 api.add_resource(Logout, '/logout')
+
 
 # ------------------- RECIPES -------------------
 class RecipeIndex(Resource):
@@ -78,6 +85,10 @@ class RecipeIndex(Resource):
         user_id = session.get('user_id')
         if not user_id:
             return {"error": "Unauthorized"}, 401
+        user = User.query.get(user_id)
+        if not user:
+            return {"error": "Unauthorized"}, 401
+
         recipes = Recipe.query.all()
         return [{
             "title": r.title,
@@ -93,6 +104,10 @@ class RecipeIndex(Resource):
         user_id = session.get('user_id')
         if not user_id:
             return {"error": "Unauthorized"}, 401
+        user = User.query.get(user_id)
+        if not user:
+            return {"error": "Unauthorized"}, 401
+
         data = request.get_json()
         try:
             recipe = Recipe(
@@ -108,8 +123,8 @@ class RecipeIndex(Resource):
                 "instructions": recipe.instructions,
                 "minutes_to_complete": recipe.minutes_to_complete,
                 "user": {
-                    "id": recipe.user.id,
-                    "username": recipe.user.username
+                    "id": user.id,
+                    "username": user.username
                 }
             }, 201
         except Exception as e:
@@ -117,6 +132,7 @@ class RecipeIndex(Resource):
             return {"errors": str(e)}, 422
 
 api.add_resource(RecipeIndex, '/recipes')
+
 
 # ------------------- RUN -------------------
 if __name__ == '__main__':
